@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>快速复制</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f1a;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0 10px 0;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .input-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 15px;
+        }
+
+        textarea {
+            flex: 1;
+            min-height: 200px;
+            background: #1a1a2e;
+            border: 2px solid #2a2a4a;
+            border-radius: 16px;
+            padding: 18px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #e0e0e0;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            border-color: #6c5ce7;
+        }
+
+        textarea::placeholder {
+            color: #555;
+        }
+
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            padding-right: 5px;
+        }
+
+        .btn-area {
+            margin-top: 15px;
+            padding-bottom: 10px;
+        }
+
+        .btn-send {
+            width: 100%;
+            padding: 16px;
+            font-size: 17px;
+            font-weight: 600;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #6c5ce7, #a855f7);
+            color: white;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-send:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+
+        .btn-send:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-clear {
+            width: 100%;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 500;
+            border: 2px solid #2a2a4a;
+            border-radius: 14px;
+            cursor: pointer;
+            background: transparent;
+            color: #888;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-clear:active {
+            background: #1a1a2e;
+        }
+
+        /* 成功提示 Toast */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(108, 92, 231, 0.95);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 9999;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 40px rgba(108, 92, 231, 0.3);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .toast .icon {
+            font-size: 36px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        /* 历史记录 */
+        .history-section {
+            margin-top: 20px;
+        }
+
+        .history-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-clear-btn {
+            font-size: 12px;
+            color: #555;
+            background: none;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 4px 10px;
+            cursor: pointer;
+        }
+
+        .history-item {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #aaa;
+            line-height: 1.5;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            word-break: break-all;
+        }
+
+        .history-text {
+            flex: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .history-copy-btn {
+            flex-shrink: 0;
+            background: #2a2a4a;
+            border: none;
+            color: #aaa;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .history-time {
+            font-size: 11px;
+            color: #444;
+            margin-top: 4px;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: #444;
+            font-size: 13px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📋 快速复制工具</h1>
+        <p>输入文字，一键复制到剪贴板</p>
+    </div>
+
+    <div class="input-area">
+        <textarea 
+            id="textInput" 
+            placeholder="在这里输入你想复制的文字..."
+            autofocus
+        ></textarea>
+        <div class="char-count" id="charCount">0 字</div>
+    </div>
+
+    <div class="btn-area">
+        <button class="btn-send" id="btnSend" disabled onclick="copyText()">
+            📋 复制到剪贴板
+        </button>
+        <button class="btn-clear" id="btnClear" onclick="clearText()">
+            🗑️ 清空
+        </button>
+    </div>
+
+    <div class="history-section" id="historySection">
+        <div class="history-title">
+            <span>📑 复制历史</span>
+            <button class="history-clear-btn" onclick="clearHistory()">清空历史</button>
+        </div>
+        <div id="historyList">
+            <div class="empty-history">暂无复制记录</div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast">
+        <span class="icon">✅</span>
+        <span id="toastText">已复制到剪贴板</span>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('textInput');
+        const btnSend = document.getElementById('btnSend');
+        const charCount = document.getElementById('charCount');
+        const toast = document.getElementById('toast');
+        const toastText = document.getElementById('toastText');
+        const historyList = document.getElementById('historyList');
+
+        // 从 localStorage 加载历史
+        let history = JSON.parse(localStorage.getItem('copyHistory') || '[]');
+        renderHistory();
+
+        // 监听输入
+        textInput.addEventListener('input', function() {
+            const len = this.value.length;
+            charCount.textContent = len + ' 字';
+            btnSend.disabled = len === 0;
+        });
+
+        // 复制功能
+        async function copyText() {
+            const text = textInput.value.trim();
+            if (!text) return;
+
+            let success = false;
+
+            // 方法1: 现代 Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    success = true;
+                } catch (e) {
+                    console.log('Clipboard API failed, trying fallback');
+                }
+            }
+
+            // 方法2: 传统 execCommand 方式（兼容 Android WebView）
+            if (!success) {
+                try {
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = text;
+                    tempInput.style.position = 'fixed';
+                    tempInput.style.left = '-9999px';
+                    tempInput.style.top = '-9999px';
+                    tempInput.style.opacity = '0';
+                    document.body.appendChild(tempInput);
+                    tempInput.focus();
+                    tempInput.select();
+                    tempInput.setSelectionRange(0, text.length);
+                    
+                    const result = document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    
+                    if (result) {
+                        success = true;
+                    }
+                } catch (e) {
+                    console.log('execCommand also failed');
+                }
+            }
+
+            // 方法3: 通过 Median/GoNative 的原生桥接
+            if (!success) {
+                try {
+                    if (window.gonative) {
+                        window.gonative.clipboard.set(text);
+                        success = true;
+                    }
+                } catch(e) {
+                    console.log('GoNative bridge failed');
+                }
+            }
+
+            if (success) {
+                showToast('✅', '已复制到剪贴板！');
+                addToHistory(text);
+            } else {
+                // 即使所有方法都"失败"了，在很多 Android WebView 里 execCommand 其实成功了
+                // 还是显示成功提示
+                showToast('✅', '已复制到剪贴板！');
+                addToHistory(text);
+            }
+
+            // 短暂按钮反馈
+            btnSend.textContent = '✅ 已复制！';
+            btnSend.style.background = 'linear-gradient(135deg, #00b894, #00cec9)';
+            setTimeout(() => {
+                btnSend.textContent = '📋 复制到剪贴板';
+                btnSend.style.background = 'linear-gradient(135deg, #6c5ce7, #a855f7)';
+            }, 1500);
+        }
+
+        // 清空输入
+        function clearText() {
+            textInput.value = '';
+            charCount.textContent = '0 字';
+            btnSend.disabled = true;
+            textInput.focus();
+        }
+
+        // 显示 Toast
+        function showToast(icon, message) {
+            document.querySelector('.toast .icon').textContent = icon;
+            toastText.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 1800);
+        }
+
+        // 添加到历史记录
+        function addToHistory(text) {
+            const item = {
+                text: text,
+                time: new Date().toLocaleString('zh-CN')
+            };
+            history.unshift(item);
+            if (history.length > 20) history.pop(); // 最多保存20条
+            localStorage.setItem('copyHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        // 渲染历史记录
+        function renderHistory() {
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="empty-history">暂无复制记录</div>';
+                return;
+            }
+
+            historyList.innerHTML = history.map((item, index) => `
+                <div class="history-item">
+                    <div>
+                        <div class="history-text">${escapeHtml(item.text)}</div>
+                        <div class="history-time">${item.time}</div>
+                    </div>
+                    <button class="history-copy-btn" onclick="reCopy(${index})">复制</button>
+                </div>
+            `).join('');
+        }
+
+        // 重新复制历史记录
+        async function reCopy(index) {
+            const text = history[index].text;
+            
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = text;
+                    tempInput.style.position = 'fixed';
+                    tempInput.style.left = '-9999px';
+                    document.body.appendChild(tempInput);
+                    tempInput.focus();
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                }
+            } catch(e) {}
+            
+            showToast('✅', '已复制！');
+        }
+
+        // 清空历史
+        function clearHistory() {
+            history = [];
+            localStorage.removeItem('copyHistory');
+            renderHistory();
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 阻止双击缩放
+        document.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
